@@ -9,7 +9,7 @@ license = "GPL-3.0"
 base64 = { version = "0.23", optional = true }
 byteorder = "1.5"
 env_logger = "0.11"
-libgssapi = { version = "0.11", optional = true }
+libgssapi = { version = "0.11", default-features = false, optional = true }
 log = "0.4"
 reqwest = { version = "0.13", default-features = false, features = ["blocking", "json", "gzip", "default-tls", "charset", "system-proxy"] }
 serde = { version = "1.0", features = ["derive"] }
@@ -26,7 +26,8 @@ usbsas-utils = { path = "../usbsas-utils" }
 [features]
 authkrb = ["base64", "libgssapi"]
 native-tls = ["reqwest/native-tls"]
-default = ["authkrb"]
+default = ["authkrb" , "libgssapi/bindgen-runtime"]
+bindgen-static = ["libgssapi/bindgen-static"]
 
 [[bin]]
 path = "src/bin/analyzer.rs"
