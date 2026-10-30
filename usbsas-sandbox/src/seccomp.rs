@@ -13,7 +13,7 @@ pub(crate) fn new_context_with_common_rules(
     fds_read: Vec<RawFd>,
     fds_write: Vec<RawFd>,
 ) -> Result<Context> {
-    let mut ctx = Context::init_with_action(Action::KillProcess)?;
+    let mut ctx = Context::init_with_action(Action::Trap)?;
 
     // Allow read
     for fd in &fds_read {

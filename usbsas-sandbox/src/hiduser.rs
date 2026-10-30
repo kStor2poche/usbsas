@@ -15,7 +15,10 @@ pub fn seccomp(device_fd: RawFd, uinput_device: RawFd) -> Result<()> {
         &[Comparator::new(0, Cmp::Eq, uinput_device as u64, None)],
     )?;
 
+    #[cfg(not(target_arch = "aarch64"))]
     ctx.allow_syscall(Syscall::poll)?;
+    #[cfg(target_arch = "aarch64")]
+    ctx.allow_syscall(Syscall::ppoll)?;
 
     ctx.set_rule_for_syscall(
         Action::Allow,
