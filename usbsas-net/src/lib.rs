@@ -14,6 +14,7 @@ pub use downloader::Downloader;
 pub use jsonparser::JsonParser;
 pub use uploader::Uploader;
 
+#[cfg(feature = "authkrb")]
 use base64::{Engine as _, engine as b64eng};
 #[cfg(feature = "authkrb")]
 use libgssapi::{
