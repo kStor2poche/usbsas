@@ -9,5 +9,9 @@ license = "GPL-3.0"
 time = "0.3"
 
 [build-dependencies]
-bindgen = "0.73"
+bindgen = { version = "0.73", default-features = false }
 cc = "1.9"
+
+[features]
+bindgen-runtime = ["bindgen/runtime"]
+bindgen-static = ["bindgen/static"]

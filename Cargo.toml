@@ -59,3 +59,7 @@ strip = true
 codegen-units = 1
 lto = "fat"
 opt-level = 3
+
+[patch.crates-io]
+libgssapi = { git = "https://github.com/kStor2poche/libgssapi.git" }
+clang-sys = { git = "https://github.com/h3clabs/clang-sys.git" }

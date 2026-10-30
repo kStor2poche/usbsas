@@ -12,8 +12,13 @@ fscommon = { git = "https://github.com/rafalh/rust-fscommon", rev = "89706258032
 log = "0.4"
 thiserror = "2.0"
 usbsas-comm = { path = "../usbsas-comm" }
-usbsas-fsrw = { path = "../usbsas-fsrw" }
+usbsas-fsrw = { path = "../usbsas-fsrw", default-features = false }
 usbsas-mbr = { path = "../usbsas-mbr" }
 usbsas-proto = { path = "../usbsas-proto" }
 usbsas-sandbox = { path = "../usbsas-sandbox" }
 usbsas-utils = { path = "../usbsas-utils" }
+
+[features]
+default = ["bindgen-runtime"]
+bindgen-runtime = ["usbsas-fsrw/bindgen-runtime"]
+bindgen-static = ["usbsas-fsrw/bindgen-static"]
