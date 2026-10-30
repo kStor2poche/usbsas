@@ -77,6 +77,27 @@ pub fn sandbox(
     ctx.allow_syscall(Syscall::write)?;
     ctx.allow_syscall(Syscall::writev)?;
 
+    // With musl, reqwest/hyper/tokio seems to use membarrier, likely because of the pthread_create impl.
+    // See https://git.musl-libc.org/cgit/musl/tree/src/linux/membarrier.c?h=v1.2.6
+    //     https://git.musl-libc.org/cgit/musl/tree/src/thread/pthread_create.c?h=v1.2.6
+    #[cfg(target_env = "musl")]
+    ctx.set_rule_for_syscall(
+        Action::Allow,
+        Syscall::membarrier,
+        &[
+            Comparator::new(
+            0,
+            Cmp::MaskedEq,
+            u64::from(u32::MAX),
+            Some(libc::MEMBARRIER_CMD_REGISTER_PRIVATE_EXPEDITED as u64)),
+            Comparator::new(
+            1,
+            Cmp::MaskedEq,
+            u64::from(u32::MAX),
+            Some(0)),
+        ],
+    )?;
+
     // Allow mprotect without PROT_EXEC
     ctx.allow_syscall(Syscall::mprotect)?;
     ctx.set_rule_for_syscall(

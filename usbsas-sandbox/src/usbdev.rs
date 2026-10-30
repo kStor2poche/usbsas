@@ -90,6 +90,20 @@ pub fn seccomp_thread(udev_socket: RawFd, poll_fd: RawFd) -> Result<()> {
         )],
     )?;
 
+    // In musl's `open()` implementation, `fcntl(..., F_SETFD, FD_CLOEXEC)` is always called after
+    // the `open` or `openat` syscall if `O_CLOEXEC` is set.
+    // In this case, it is done on `/etc/udev/udev.conf`, for which we don't know the fd n° for, so
+    // we skip the fd n° check
+    #[cfg(target_env = "musl")]
+    ctx.set_rule_for_syscall(
+        Action::Allow,
+        Syscall::fcntl,
+        &[
+            Comparator::new(1, Cmp::MaskedEq, u64::from(u32::MAX), Some(libc::F_SETFD as u64)),
+            Comparator::new(2, Cmp::Eq, libc::FD_CLOEXEC as u64, None),
+        ]
+    )?;
+
     // Allow mprotect without PROT_EXEC
     ctx.allow_syscall(Syscall::mprotect)?;
     ctx.set_rule_for_syscall(

@@ -7,14 +7,17 @@ use syscallz::{Action, Cmp, Comparator, Syscall};
 pub fn seccomp(fd_read: RawFd, fd_write: RawFd) -> Result<()> {
     let mut ctx = seccomp::new_context_with_common_rules(vec![fd_read], vec![fd_write])?;
 
+    #[cfg(not(target_arch = "aarch64"))]
     ctx.allow_syscall(Syscall::open)?;
     ctx.allow_syscall(Syscall::openat)?;
     ctx.allow_syscall(Syscall::read)?;
     ctx.allow_syscall(Syscall::close)?;
     ctx.allow_syscall(Syscall::lseek)?;
+    #[cfg(not(target_arch = "aarch64"))]
     ctx.allow_syscall(Syscall::stat)?;
     ctx.allow_syscall(Syscall::fstat)?;
     ctx.allow_syscall(Syscall::statx)?;
+    #[cfg(not(target_arch = "aarch64"))]
     ctx.allow_syscall(Syscall::lstat)?;
     ctx.allow_syscall(Syscall::newfstatat)?;
     ctx.allow_syscall(Syscall::getdents64)?;
