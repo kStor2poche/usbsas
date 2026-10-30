@@ -81,7 +81,7 @@ pub(crate) fn new_context_with_common_rules(
         )],
     )?;
 
-    // Allow ioctl TCGETS & TCGETS2 on stderr needed by env_logger >= 0.11
+    // Allow ioctl TCGETS, TCGETS2 and TIOCGWINSZ (musl only) on stderr needed by env_logger >= 0.11
     ctx.set_rule_for_syscall(
         Action::Allow,
         Syscall::ioctl,
@@ -102,6 +102,15 @@ pub(crate) fn new_context_with_common_rules(
             Comparator::new(1, Cmp::Eq, libc::TCGETS2 as u64, None),
             #[cfg(not(target_env = "musl"))]
             Comparator::new(1, Cmp::Eq, libc::TCGETS2, None),
+        ],
+    )?;
+    #[cfg(target_env = "musl")]
+    ctx.set_rule_for_syscall(
+        Action::Allow,
+        Syscall::ioctl,
+        &[
+            Comparator::new(0, Cmp::MaskedEq, u64::from(u32::MAX), Some(2)),
+            Comparator::new(1, Cmp::MaskedEq, u64::from(u32::MAX), Some(libc::TIOCGWINSZ as u64)),
         ],
     )?;
 
@@ -190,81 +199,11 @@ pub(crate) fn apply_libusb_rules(ctx: &mut Context, device_fd: RawFd) -> Result<
                 u64::from(u32::MAX),
                 Some(device_fd as u64),
             ),
-            Comparator::new(1, Cmp::Eq, unsafe { crate::usbdevfs_submiturb() }, None),
-        ],
-    )?;
-    ctx.set_rule_for_syscall(
-        Action::Allow,
-        Syscall::ioctl,
-        &[
-            Comparator::new(
-                0,
-                Cmp::MaskedEq,
-                u64::from(u32::MAX),
-                Some(device_fd as u64),
-            ),
-            Comparator::new(1, Cmp::Eq, unsafe { crate::usbdevfs_reapurbndelay() }, None),
-        ],
-    )?;
-    ctx.set_rule_for_syscall(
-        Action::Allow,
-        Syscall::ioctl,
-        &[
-            Comparator::new(
-                0,
-                Cmp::MaskedEq,
-                u64::from(u32::MAX),
-                Some(device_fd as u64),
-            ),
             Comparator::new(
                 1,
-                Cmp::Eq,
-                unsafe { crate::usbdevfs_releaseinterface() },
-                None,
-            ),
-        ],
-    )?;
-    ctx.set_rule_for_syscall(
-        Action::Allow,
-        Syscall::ioctl,
-        &[
-            Comparator::new(
-                0,
                 Cmp::MaskedEq,
                 u64::from(u32::MAX),
-                Some(device_fd as u64),
-            ),
-            Comparator::new(1, Cmp::Eq, unsafe { crate::usbdevfs_ioctl() }, None),
-        ],
-    )?;
-    ctx.set_rule_for_syscall(
-        Action::Allow,
-        Syscall::ioctl,
-        &[
-            Comparator::new(
-                0,
-                Cmp::MaskedEq,
-                u64::from(u32::MAX),
-                Some(device_fd as u64),
-            ),
-            Comparator::new(1, Cmp::Eq, unsafe { crate::usbdevfs_discardurb() }, None),
-        ],
-    )?;
-    ctx.set_rule_for_syscall(
-        Action::Allow,
-        Syscall::ioctl,
-        &[
-            Comparator::new(
-                0,
-                Cmp::MaskedEq,
-                u64::from(u32::MAX),
-                Some(device_fd as u64),
-            ),
-            Comparator::new(
-                1,
-                Cmp::Eq,
-                unsafe { crate::usbdevfs_get_capabilities() },
-                None,
+                Some(unsafe { crate::usbdevfs_submiturb() }),
             ),
         ],
     )?;
@@ -280,9 +219,99 @@ pub(crate) fn apply_libusb_rules(ctx: &mut Context, device_fd: RawFd) -> Result<
             ),
             Comparator::new(
                 1,
-                Cmp::Eq,
-                unsafe { crate::usbdevfs_disconnect_claim() },
-                None,
+                Cmp::MaskedEq,
+                u64::from(u32::MAX),
+                Some(unsafe { crate::usbdevfs_reapurbndelay() }),
+            ),
+        ],
+    )?;
+    ctx.set_rule_for_syscall(
+        Action::Allow,
+        Syscall::ioctl,
+        &[
+            Comparator::new(
+                0,
+                Cmp::MaskedEq,
+                u64::from(u32::MAX),
+                Some(device_fd as u64),
+            ),
+            Comparator::new(
+                1,
+                Cmp::MaskedEq,
+                u64::from(u32::MAX),
+                Some(unsafe { crate::usbdevfs_releaseinterface() }),
+            ),
+        ],
+    )?;
+    ctx.set_rule_for_syscall(
+        Action::Allow,
+        Syscall::ioctl,
+        &[
+            Comparator::new(
+                0,
+                Cmp::MaskedEq,
+                u64::from(u32::MAX),
+                Some(device_fd as u64),
+            ),
+            Comparator::new(
+                1,
+                Cmp::MaskedEq,
+                u64::from(u32::MAX),
+                Some(unsafe { crate::usbdevfs_ioctl() }),
+            ),
+        ],
+    )?;
+    ctx.set_rule_for_syscall(
+        Action::Allow,
+        Syscall::ioctl,
+        &[
+            Comparator::new(
+                0,
+                Cmp::MaskedEq,
+                u64::from(u32::MAX),
+                Some(device_fd as u64),
+            ),
+            Comparator::new(
+                1,
+                Cmp::MaskedEq,
+                u64::from(u32::MAX),
+                Some(unsafe { crate::usbdevfs_discardurb() }),
+            ),
+        ],
+    )?;
+    ctx.set_rule_for_syscall(
+        Action::Allow,
+        Syscall::ioctl,
+        &[
+            Comparator::new(
+                0,
+                Cmp::MaskedEq,
+                u64::from(u32::MAX),
+                Some(device_fd as u64),
+            ),
+            Comparator::new(
+                1,
+                Cmp::MaskedEq,
+                u64::from(u32::MAX),
+                Some(unsafe { crate::usbdevfs_get_capabilities() }),
+            ),
+        ],
+    )?;
+    ctx.set_rule_for_syscall(
+        Action::Allow,
+        Syscall::ioctl,
+        &[
+            Comparator::new(
+                0,
+                Cmp::MaskedEq,
+                u64::from(u32::MAX),
+                Some(device_fd as u64),
+            ),
+            Comparator::new(
+                1,
+                Cmp::MaskedEq,
+                u64::from(u32::MAX),
+                Some(unsafe { crate::usbdevfs_disconnect_claim() }),
             ),
         ],
     )?;

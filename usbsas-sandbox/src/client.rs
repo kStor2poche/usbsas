@@ -49,6 +49,18 @@ pub fn sandbox(
         )],
     )?;
 
+    ctx.set_rule_for_syscall(
+        Action::Allow,
+        Syscall::kcmp,
+        &[Comparator::new(
+            2,
+            Cmp::Eq,
+            // libc::KCMP_FILES as u64,
+            2i32 as u64, // XXX: waiting for https://github.com/rust-lang/libc/pull/5692
+            None,
+        )],
+    )?;
+
     ctx.allow_syscall(Syscall::bind)?;
     ctx.allow_syscall(Syscall::clone3)?;
     ctx.allow_syscall(Syscall::close)?;
@@ -74,7 +86,10 @@ pub fn sandbox(
     ctx.allow_syscall(Syscall::memfd_create)?;
     ctx.allow_syscall(Syscall::newfstatat)?;
     ctx.allow_syscall(Syscall::openat)?;
+    #[cfg(not(target_arch = "aarch64"))]
     ctx.allow_syscall(Syscall::mkdir)?;
+    #[cfg(target_arch = "aarch64")]
+    ctx.allow_syscall(Syscall::mkdirat)?;
 
     #[cfg(not(target_arch = "aarch64"))]
     ctx.allow_syscall(Syscall::poll)?;
