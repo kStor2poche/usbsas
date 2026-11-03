@@ -1,0 +1,10 @@
+#! /bin/sh
+
+# Add usbsas-client user to seat group
+
+set -e
+echo "adding usbsas-client to group seat"
+set +e
+addgroup usbsas-client seat
+
+exit 0

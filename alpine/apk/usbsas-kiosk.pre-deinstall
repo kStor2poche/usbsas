@@ -1,0 +1,14 @@
+#! /bin/sh
+
+# Stop usbsas-kiosk service
+# TODO: check correctness
+
+set -e
+echo "stopping usbsas-kiosk service"
+if rc-service usbsas-kiosk status; then
+    rc-service usbsas-kiosk stop
+    rc-update del usbsas-kiosk
+fi
+pkill -u usbsas-client 2>/dev/null || true
+
+exit 0

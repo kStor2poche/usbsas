@@ -1,0 +1,16 @@
+#! /bin/sh
+
+# Create usbsas-client user and add it to usbsas group
+set +e
+if [ -z "$(id -u usbsas-client 2>/dev/null)" ]; then
+    set -e
+    echo "adding usbsas-client user"
+    adduser -S -G usbsas -h /var/lib/usbsas-client \
+        -g "usbsas-client" usbsas-client 2>/dev/null
+    mkdir -p /var/lib/usbsas/reports
+    chown usbsas-client:usbsas /var/lib/usbsas/reports
+fi
+
+# TODO: prevent a?getty and autovt tty2 activation
+
+exit 0

@@ -1,0 +1,17 @@
+#! /bin/sh
+
+# Delete usbsas-hid user and group and reload udev rules
+
+set -e
+# Reload udev rules
+echo "reloading udev rules"
+udevadm control --reload-rules
+udevadm trigger
+
+set +e
+if id usbsas-hid >/dev/null 2>&1; then
+    set -e
+    deluser usbsas-hid
+fi
+
+exit 0

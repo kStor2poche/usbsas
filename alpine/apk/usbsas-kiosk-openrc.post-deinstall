@@ -1,0 +1,10 @@
+#! /bin/sh
+
+# Remove usbsas-client user from seat group
+
+set -e
+echo "removing usbsas-client user from seat group"
+set +e
+delgroup usbsas-client seat
+
+exit 0

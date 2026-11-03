@@ -1,0 +1,13 @@
+FROM alpine:3.24
+
+RUN apk add -q --purge \
+    alpine-sdk
+
+RUN git clone --depth=1 --branch=3.24-stable https://gitlab.alpinelinux.org/alpine/aports.git
+
+WORKDIR /aports/main/linux-rpi
+
+RUN echo -e "CONFIG_HID=m\nCONFIG_USB_HID=m\nCONFIG_HID_GENERIC=m\nCONFIG_INPUT_MOUSEDEV=m\nCONFIG_KEYBOARD_ATKBD=n" >> common-changes.config
+
+ENTRYPOINT ["/bin/ash", "-c"]
+CMD ["if [[ ! -f /root/.abuild/*.rsa ]]; then abuild-keygen -na && cp /root/.abuild/*.rsa.pub /etc/apk/keys; fi; abuild -F checksum && abuild -KFcr"]

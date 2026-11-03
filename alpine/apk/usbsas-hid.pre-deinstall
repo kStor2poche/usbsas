@@ -1,0 +1,13 @@
+#! /bin/sh
+
+# Stop hid-dealer service
+# TODO: check correctness
+
+set -e
+echo "stopping hid-dealer service"
+if rc-service hid-dealer status; then
+    rc-service hid-dealer stop
+    rc-update del hid-dealer
+fi
+
+exit 0

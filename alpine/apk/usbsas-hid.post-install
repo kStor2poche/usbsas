@@ -1,0 +1,24 @@
+#! /bin/sh
+
+# Create usbsas-hid user and group and reload udev rules
+
+set +e
+if [ -z "$(id -u usbsas-hid 2>/dev/null)" ]; then
+    set -e
+    echo "adding usbsas-hid user and group"
+    set +e
+    if ! getent group usbsas-hid; then
+        set -e
+        addgroup -S usbsas-hid 2>/dev/null
+    fi
+    adduser -S -G usbsas-hid -g "usbsas-hid" usbsas-hid 2>/dev/null
+fi
+
+echo "reloading udev rules"
+if udevadm control --reload-rules >/dev/null 2>&1; then
+    udevadm trigger
+else
+    echo "WARNING: skipping udevd doesn't seem to be running, skipping udevadm trigger..."
+fi
+
+exit 0
