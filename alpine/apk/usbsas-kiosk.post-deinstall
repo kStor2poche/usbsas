@@ -1,0 +1,14 @@
+#! /bin/sh
+
+# Delete usbsas-client user
+
+# TODO: undo prevent a?getty and autovt tty2 activation
+set -e
+echo "deleting usbsas-client user"
+set +e
+if id usbsas-client >/dev/null; then
+    set -e
+    deluser --remove-home usbsas-client
+fi
+
+exit 0

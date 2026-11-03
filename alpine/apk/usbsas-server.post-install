@@ -1,0 +1,29 @@
+#! /bin/sh
+
+# Create usbsas user and group and reload udev rules
+
+set +e
+if [ -z "$(id -u usbsas 2>/dev/null)" ]; then
+    set -e
+    echo "adding usbsas user and group"
+    set +e
+    if ! getent group usbsas; then
+        set -e
+        addgroup -S usbsas 2>/dev/null
+    fi
+    adduser -S -G usbsas -h /var/lib/usbsas \
+        -g "usbsas" usbsas 2>/dev/null
+fi
+
+echo "reloading udev rules"
+if udevadm control --reload-rules >/dev/null 2>&1; then
+    udevadm trigger
+else
+    echo "WARNING: skipping udevd doesn't seem to be running, skipping udevadm trigger..."
+fi
+
+echo "creating /usbsas_data"
+mkdir -p /usbsas_data
+chown usbsas /usbsas_data
+
+exit 0

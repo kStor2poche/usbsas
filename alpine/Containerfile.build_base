@@ -1,0 +1,49 @@
+FROM alpine:3.24 as usbsas_builder
+
+RUN apk add -q --purge gcc rust cargo alpine-sdk
+
+RUN abuild-keygen -na && \
+    cp /root/.abuild/*.rsa.pub /etc/apk/keys
+
+# assume we are building it with the usbsas directory as root
+COPY --exclude=.git \
+     --exclude=debian \
+     --exclude=doc \
+     --exclude=target \
+     --exclude=alpine/aport-scripts \
+     --exclude=alpine/Containerfile.build_base \
+     . /usbsas
+
+WORKDIR /usbsas/alpine/apk
+
+# shipping this as a part of usbsas and sourcing usbsas from upstream in the APKBUILD makes it impossible to provide a working stable checksum, hence `abuild -F checksum`
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+    --mount=type=cache,target=/usr/local/cargo/git \
+    --mount=type=cache,target=/usbsas/target \
+    --mount=type=cache,target=/root/packages \
+    abuild -F checksum && \
+    abuild -KFrq && \
+    mkdir /out && \
+    cp -r /root/packages /out/
+
+# ===============================
+FROM alpine:3.24
+
+COPY --from=usbsas_builder /out /tmp
+COPY --from=usbsas_builder /etc/apk/keys/*.rsa.pub /etc/apk/keys/
+
+RUN apk add -q --purge abuild apk-tools alpine-conf busybox fakeroot xorriso squashfs-tools mtools sfdisk dosfstools git mkinitfs && \
+    adduser -D builder
+
+USER builder
+WORKDIR /home/builder
+
+RUN git clone --depth=1 --branch=3.24-stable https://gitlab.alpinelinux.org/alpine/aports.git && \
+    abuild-keygen -na
+
+COPY --chown=builder:builder ./alpine/aport-scripts/* /home/builder/aports/scripts/
+
+WORKDIR /home/builder/aports/scripts
+
+ENTRYPOINT [ "./mkimage.sh" ]
+CMD [ "--tag", "v3.24", "--outdir", "/out", "--arch", "aarch64", "--repository", "/tmp/packages/alpine/", "--hostkeys", "--repository", "https://dl-cdn.alpinelinux.org/alpine/v3.24/main", "--repository", "https://dl-cdn.alpinelinux.org/alpine/v3.24/community", "--profile", "rpiimg_usbsas" ]

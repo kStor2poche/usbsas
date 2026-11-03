@@ -1,0 +1,21 @@
+#!/sbin/openrc-run
+# vim:ft=sh:
+# OpenRC service for SAS USB hid-dealer
+
+description="USB HID dealer"
+
+supervisor=supervise-daemon
+command=/usr/libexec/hid-dealer
+command_user="usbsas-hid"
+directory="/usr/libexec"
+no_new_privs="yes"
+
+export RUST_LOG="info"
+
+respawn_delay=1
+respawn_max=0
+
+depend() {
+    need udev
+    after udev
+}

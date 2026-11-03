@@ -1,0 +1,37 @@
+services:
+  apk_build_base:
+    build:
+      context: .
+      dockerfile: Containerfile.apk_build_base
+    platform: linux/aarch64
+    # stdin_open: true
+    # tty: true
+#
+    command: sh -c "rm -rf /root/packages/*; abuild-keygen -na && cp /root/.abuild/*.rsa.pub /etc/apk/keys; cd /usbsas-apk && abuild -F checksum && abuild -KFc"
+    network: host
+    volumes:
+      - ./apk:/usbsas-apk
+      - keys:/etc/apk/keys
+      - repo:/root/packages
+  img_build_base:
+    build:
+      context: .
+      dockerfile: Containerfile.img_build_base
+    platform: linux/aarch64
+    # stdin_open: true
+    # tty: true
+    # entrypoint: /bin/ash
+    command: --tag v3.24 --outdir /out --arch aarch64 --repository /tmp/packages/alpine/ --hostkeys --repository https://dl-cdn.alpinelinux.org/alpine/v3.24/main --repository https://dl-cdn.alpinelinux.org/alpine/v3.24/community --profile rpi_usbsas
+    network: host
+    volumes:
+      - keys:/etc/apk/keys
+      - repo:/tmp/packages/alpine
+      - ./image-out:/out:U
+    depends_on:
+      apk_build_base:
+        condition: service_completed_successfully
+        restart: true
+
+volumes:
+  keys:
+  repo:

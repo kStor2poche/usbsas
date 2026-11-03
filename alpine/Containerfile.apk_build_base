@@ -1,0 +1,16 @@
+FROM alpine:3.24
+
+RUN apk add -q --purge \
+    alpine-sdk \
+    cargo \
+    clang \
+    clang-libclang \
+    eudev-dev \
+    gcc \
+    krb5-dev \
+    libusb-dev \
+    libseccomp-dev \
+    llvm-dev \
+    musl-dev \
+    pkgconf \
+    protoc
