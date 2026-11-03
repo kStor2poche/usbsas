@@ -1,0 +1,13 @@
+#! /bin/sh
+
+# Stop usbsas-analyzer-server service
+# TODO: check correctness
+
+set -e
+echo "stopping usbsas-analyzer-server service"
+if rc-service usbsas-analyzer-server status; then
+    rc-service usbsas-analyzer-server stop
+    rc-update del usbsas-analyzer-server
+fi
+
+exit 0

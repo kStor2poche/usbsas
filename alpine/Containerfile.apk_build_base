@@ -1,0 +1,43 @@
+FROM alpine:3.24
+
+RUN apk add -q --purge \
+    gcc \
+    rust \
+    cargo \
+    alpine-sdk \
+    alpine-sdk \
+    cargo \
+    clang-static \
+    eudev-dev \
+    gcc \
+    libgcc-static \
+    libusb-dev \
+    libseccomp-static \
+    libxml2-static \
+    linux-headers \
+    lld \
+    llvm-static \
+    llvm-dev \
+    musl-dev \
+    ncurses-static \
+    pkgconf \
+    protoc \
+    zlib-static \
+    zstd-static \
+    eudev \
+    udev-init-scripts \
+    libusb \
+    libseccomp \
+    wayland-libs-egl \
+    font-noto \
+    font-noto-emoji \
+    seatd \
+    seatd-launch \
+    clamav-daemon \
+    freshclam \
+    fuse3 \
+    eudev \
+    udev-init-scripts
+
+RUN abuild-keygen -na && \
+    cp /root/.abuild/*.rsa.pub /etc/apk/keys

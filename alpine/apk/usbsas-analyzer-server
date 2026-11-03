@@ -1,0 +1,26 @@
+#!/sbin/openrc-run
+# vim:ft=sh:
+# OpenRC service for usbsas-analyzer-server
+
+description="usbsas analyzer server"
+
+supervisor=supervise-daemon
+command=/usr/bin/usbsas-analyzer-server
+command_args="--working-dir /var/lib/usbsas-analyzer-server --disable-shutdown"
+command_user="usbsas"
+directory="/usr/bin"
+state_dir="/var/lib/usbsas-analyzer-server"
+
+export RUST_LOG="info"
+
+respawn_delay=5
+respawn_max=0
+
+depend() {
+    after net-online
+    after clamd
+}
+
+start_pre() {
+    checkpath -d -o usbsas -m 0755 $state_dir || return 1
+}

@@ -1,0 +1,30 @@
+#!/sbin/openrc-run
+# vim:ft=sh:
+# OpenRC service for usbsas-usbsas
+
+description="SAS USB Server"
+
+supervisor=supervise-daemon
+command=/usr/libexec/usbsas-usbsas
+command_args="-s"
+command_user="usbsas"
+directory="/usr/libexec"
+runtime_dir="/run/usbsas"
+
+export RUST_LOG="info"
+
+respawn_delay=1
+respawn_max=0
+
+depend() {
+    need loopback
+    after loopback
+}
+
+start_pre() {
+    checkpath -d -o usbsas -m 0755 $runtime_dir || return 1
+}
+
+stop_pre() {
+    rm -rf $runtime_dir
+}

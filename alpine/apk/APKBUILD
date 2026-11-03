@@ -1,0 +1,186 @@
+# vim:noet:
+pkgname=usbsas
+subpackages="
+	usbsas-server:server:all
+	usbsas-server-openrc:server_openrc
+	usbsas-kiosk:kiosk:all
+	usbsas-kiosk-openrc:kiosk_openrc
+	usbsas-analyzer-server:analyzer_server:all
+	usbsas-analyzer-server-openrc:analyzer_server_openrc
+	usbsas-tools:tools:all
+	usbsas-hid:hid:all
+	usbsas-hid-openrc:hid_openrc
+"
+pkgver=0.3.4
+pkgrel=0
+pkgdesc="A free and open source (GPLv3) tool and framework for securely reading untrusted USB mass storage devices. (meta-package)"
+license="GPL-3.0-only"
+url=https://github.com/cea-sec/usbsas
+
+# _ref="v$pkgver"
+_ref="raspi-demo"
+# source="$pkgname-$pkgver.tar.gz::https://github.com/cea-sec/usbsas/archive/refs/tags/${_ref}.tar.gz"
+source="
+	$pkgname-$pkgver.tar.gz::https://github.com/kStor2poche/usbsas/archive/refs/heads/$_ref.tar.gz
+	usbsas-server
+	usbsas-kiosk
+	usbsas-analyzer-server
+	hid-dealer
+"
+install="
+	usbsas-server.post-install
+	usbsas-server.post-deinstall
+	usbsas-kiosk.post-install
+	usbsas-kiosk.pre-deinstall
+	usbsas-kiosk.post-deinstall
+	usbsas-analyzer-server.pre-deinstall
+	usbsas-hid.post-install
+	usbsas-hid.pre-deinstall
+	usbsas-hid.post-deinstall
+"
+arch="noarch"
+_common_deps="protoc"
+depends="
+	usbsas-server
+	usbsas-server-openrc
+	usbsas-kiosk
+	usbsas-kiosk-openrc
+	usbsas-analyzer-server
+	usbsas-analyzer-server-openrc
+	usbsas-tools
+	usbsas-hid
+	usbsas-hid-openrc
+"
+# TODO: fix, package and add krb5-static (cf. https://krbdev.mit.edu/rt/Ticket/History.html?id=8996)
+makedepends="
+	alpine-sdk
+	cargo
+	clang-static
+	eudev-dev
+	gcc
+	libgcc-static
+	libusb-dev
+	libseccomp-static
+	libxml2-static
+	linux-headers
+	llvm-static
+	llvm-dev
+	musl-dev
+	ncurses-static
+	pkgconf
+	protoc
+	zlib-static
+	zstd-static
+"
+options="!check" # TODO: run tests?
+# TODO: mkinitfs trigger/hook on relevant subpkgs (server & hid if I'm not mistaken)?
+
+_build_dir="$srcdir/usbsas-$_ref"
+build() {
+	cd $_build_dir
+	# TODO: usbsas-net krbauth feature support (cf. krb5-static)
+	export USBSAS_BIN_PATH=/usr/libexec
+	cargo build --release --no-default-features -F bindgen-static -p usbsas-scsi2files -p usbsas-files2fs
+	cargo build --release --no-default-features -p usbsas-net
+	cargo build --release --workspace --exclude usbsas-scsi2files --exclude usbsas-files2fs --exclude usbsas-net --exclude usbsas-mock --exclude usbsas-fsrw
+}
+
+# This is a meta-package
+package() {
+	mkdir -p "$pkgdir"
+}
+
+server() {
+	depends="$_common_deps eudev udev-init-scripts libusb libseccomp"
+	pkgdesc="A free and open source (GPLv3) tool and framework for securely reading untrusted USB mass storage devices. (server)"
+
+	cd $_build_dir
+	install -Dm 755 target/release/usbsas-usbsas \
+		target/release/usbsas-analyzer \
+		target/release/usbsas-jsonparser \
+		target/release/usbsas-cmdexec \
+		target/release/usbsas-dev2scsi \
+		target/release/usbsas-downloader \
+		target/release/usbsas-files2fs \
+		target/release/usbsas-files2tar \
+		target/release/usbsas-local2files \
+		target/release/usbsas-fs2dev \
+		target/release/usbsas-identifier \
+		target/release/usbsas-scsi2files \
+		target/release/usbsas-tar2files \
+		target/release/usbsas-uploader \
+		target/release/usbsas-usbdev \
+		-t "$subpkgdir"/usr/libexec/
+	install -Dm 644 usbsas-usbsas/assets/usbsas.conf -t "$subpkgdir"/etc/modprobe.d/
+	install -Dm 644 usbsas-usbsas/assets/99-usbsas.rules -t "$subpkgdir"/etc/udev/rules.d/
+	install -Dm 644 config.example.toml "$subpkgdir"/etc/usbsas/config.toml
+}
+server_openrc() {
+	depends="usbsas-server"
+	install -Dm 755 "$srcdir"/usbsas-server -t "$subpkgdir"/etc/init.d/
+}
+
+kiosk() {
+	depends="$_common_deps usbsas-server cage wayland-libs-egl font-noto font-noto-emoji"
+	pkgdesc="A free and open source (GPLv3) tool and framework for securely reading untrusted USB mass storage devices. (client)"
+	pkgver=$(grep '^version = ' $_build_dir/usbsas-client/Cargo.toml | cut -d'"' -f2)
+
+	cd $_build_dir
+	install -Dm 755 target/release/usbsas-client -t "$subpkgdir"/usr/bin/
+}
+kiosk_openrc() {
+	depends="usbsas-kiosk seatd seatd-launch"
+	install -Dm 755 "$srcdir"/usbsas-kiosk -t "$subpkgdir"/etc/init.d/
+}
+
+analyzer_server() {
+	depends="$_common_deps clamav-daemon freshclam"
+	pkgdesc="A free and open source (GPLv3) tool and framework for securely reading untrusted USB mass storage devices. (analyzer server)"
+	pkgver=$(grep '^version = ' $_build_dir/usbsas-analyzer-server/Cargo.toml | cut -d'"' -f2)
+
+	cd $_build_dir
+	install -Dm 755 target/release/usbsas-analyzer-server -t "$subpkgdir"/usr/bin/
+}
+analyzer_server_openrc() {
+	depends="usbsas-analyzer-server"
+	install -Dm 755 "$srcdir"/usbsas-analyzer-server -t "$subpkgdir"/etc/init.d/
+}
+
+tools() {
+	depends="usbsas-server fuse3"
+	pkgdesc="A free and open source (GPLv3) tool and framework for securely reading untrusted USB mass storage devices. (tools)"
+	pkgver=$(grep '^version = ' $_build_dir/usbsas-tools/Cargo.toml | cut -d'"' -f2)
+
+	cd $_build_dir
+	install -Dm 755 target/release/usbsas-fuse-mount \
+		target/release/usbsas-imager \
+		target/release/usbsas-net \
+		target/release/usbsas-fswriter \
+		target/release/usbsas-devmonitor \
+		-t "$subpkgdir"/usr/bin/
+}
+
+hid() {
+	depends="eudev udev-init-scripts usbsas-kiosk"
+	pkgdesc="A free and open source (GPLv3) tool and framework for securely reading untrusted USB mass storage devices. (hid)"
+	pkgver=$(grep '^version = ' $_build_dir/usbsas-hid/Cargo.toml | cut -d'"' -f2)
+
+	cd $_build_dir
+	install -Dm 755 target/release/hid-dealer target/release/hid-user -t "$subpkgdir"/usr/libexec/
+	install -Dm 644 usbsas-hid/assets/99-usbsas-hid.rules -t "$subpkgdir"/etc/udev/rules.d/
+	install -Dm 644 usbsas-hid/assets/hid.conf -t "$subpkgdir"/etc/modprobe.d/
+	install -Dm 644 usbsas-hid/assets/uinput.conf -t "$subpkgdir"/etc/modules-load.d/
+}
+hid_openrc() {
+	depends="usbsas-hid-openrc"
+	install -Dm 755 "$srcdir"/hid-dealer -t "$subpkgdir"/etc/init.d/
+}
+
+# TODO: use a proper tag and as such provide a stable checksum for our usbsas tar
+sha512sums="
+f5f89b1984c11e765d176c78ea87d9a6f3436dc3cb546fdca6e3f1164ba68222cb74c654ed4a8c0c7d5fff5fa1a8fa9674260293300e529ff074fe96ca680c6c  usbsas-0.3.4.tar.gz
+34af95e82e54e2e61627b5fed34ab0e581890b4db07625bf891420a48ba7e30d08f1d9425437cd0fad49cbc94856ad924837428ae211798c1396699bc4454837  usbsas-server
+7d58053ce4759e64eb79356e34aa61dd1e936503030cd3aeba9779273966e9bd45efb8da09c2dfb9e971e940b5873fb2090d1c085cef767452016eaa31c80ebd  usbsas-kiosk
+99b42c0d8a29ab21a4e26ccab502b34036bd3003be69c8953d206576a53ed608352352425b366fc0a6d3351e391a7101ccc2987690eae1e974ab6aee26e9867c  usbsas-analyzer-server
+efcd5d136b5ca8ba7a3497b25e75652db137bbd019e49c4af33dfc0f50017ec5abcd680d125bed289bc10aa22eee77e79c612d0c0d52dc4c903b4bab7dd333ef  hid-dealer
+"

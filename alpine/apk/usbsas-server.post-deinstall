@@ -1,0 +1,25 @@
+#! /bin/sh
+
+# Delete usbsas user and group and reload udev rules
+
+set -e
+echo "deleting usbsas user"
+set +e
+if id usbsas >/dev/null; then
+    set -e
+    delgrp=0
+    if getent group usbsas; then
+        delgrp=1
+    fi
+    deluser --remove-home usbsas
+
+    if [ $delgrp -eq 1 ]; then
+        delgroup usbsas
+    fi
+fi
+
+echo "reloading udev rules"
+udevadm control --reload-rules
+udevadm trigger
+
+exit 0

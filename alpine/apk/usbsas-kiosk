@@ -1,0 +1,39 @@
+#!/sbin/openrc-run
+# vim:ft=sh:
+# OpenRC service for usbsas-client
+
+description="usbsas-client kiosk"
+
+supervisor=supervise-daemon
+command=/usr/bin/seatd-launch
+command_args="/usr/bin/cage -d /usr/bin/usbsas-client --fullscreen"
+command_user="usbsas-client"
+directory="/var/lib/usbsas-client"
+runtime_dir="/run/usbsas-client"
+
+export RUST_LOG="info,wgpu_hal=error,iced_winit=error,iced_wgpu=error,wgpu_core=error"
+export XDG_RUNTIME_DIR="/run/usbsas-client"
+unset TERM
+
+respawn_delay=1
+respawn_max=0
+
+depend() {
+    need hid-dealer
+}
+
+start_pre() {
+    if [ ! -e /dev/tty0 ]; then
+        eerror "/dev/tty0 not found"
+        return 1
+    fi
+
+    checkpath -d -o usbsas-client -m 0755 $runtime_dir || return 1
+    deallocvt 2
+    /usr/bin/chvt 2
+}
+
+stop_pre() {
+    deallocvt 2
+    rm -rf $runtime_dir
+}

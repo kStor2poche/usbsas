@@ -1,0 +1,17 @@
+FROM alpine:3.24
+
+RUN apk add -q --purge abuild apk-tools alpine-conf busybox fakeroot xorriso squashfs-tools mtools sfdisk dosfstools git mkinitfs pigz && \
+    adduser -D builder
+
+USER builder
+WORKDIR /home/builder
+
+RUN git clone --depth=1 --branch=3.24-stable https://gitlab.alpinelinux.org/alpine/aports.git && \
+    abuild-keygen -na
+
+COPY --chown=builder:builder ./aport-scripts/* /home/builder/aports/scripts/
+
+WORKDIR /home/builder/aports/scripts
+
+ENTRYPOINT [ "./mkimage.sh" ]
+CMD [ "--tag", "v3.24", "--outdir", "/out", "--arch", "aarch64", "--repository", "/tmp/packages/alpine/", "--hostkeys", "--repository", "https://dl-cdn.alpinelinux.org/alpine/v3.24/main", "--repository", "https://dl-cdn.alpinelinux.org/alpine/v3.24/community", "--profile", "rpiimg_usbsas" ]
