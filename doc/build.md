@@ -2,10 +2,13 @@
 
 * [Requirements](#requirements)
 * [Building on Debian](#debian)
+* [Building on Alpine](#alpine)
 * [Build options](#options)
 * [Building with Docker](#docker)
 * [Debian packages](#packages)
+* [Alpine packages](#packages-alpine)
 * [Live ISO](#liveiso)
+* [Raspberry Pi image](#raspiiso)
 * [Tests](#tests)
 
 ## <a name="requirements">Requirements</a>
@@ -59,13 +62,13 @@ Then build everything:
 ```shell
 $ git clone https://github.com/cea-sec/usbsas.git
 $ cd usbsas
-$ cargo build --release --all
+$ cargo build --release --workspace
 ```
 
 The programs are in `target/release`. When running them from there, usbsas
 looks for its processes in the same directory (see `USBSAS_BIN_PATH` below).
 
-Without `--all`, only the default workspace members are built: the server, its
+Without `--workspace`, only the default workspace members are built: the server, its
 processes and the client (not the HID driver, the analyzer server nor the
 tools). A single component can be built with `-p`:
 
@@ -77,8 +80,27 @@ $ cargo build --release -p usbsas-hid
 To try usbsas from the build directory, see [Running from the build
 directory](./configuration.md#devrun) in the configuration documentation.
 
-## <a name="options">Build options</a>
+## <a name="alpine">Building on Alpine</a>
+> [!NOTE]
+> This was tested on Alpine 3.24 but may very well work on older and/or newer versions.
 
+Install the build dependencies:
+```shell
+$ doas apk add 
+```
+as well as the runtime dependencies:
+```shell
+$ doas apk add eudev udev-init-scripts libusb libseccomp cage wayland-libs-egl font-noto font-noto-emoji clamav-daemon freshclam fuse3 seatd seatd-launch
+```
+
+Then build with the following command:
+```shell
+$ cargo build --release --workspace
+```
+> [!IMPORTANT]
+> In this example, we use the `cargo` and `rust` packages provided by alpine because they link the musl dynamically for build scripts by default, which avoids a lot of hassles when building. **This is not the case by default when using binaries from rustup**. Still, you can then use `RUSTFLAGS='-C target-feature=-crt-static'` to force dynamic linking of the musl libc.
+
+## <a name="options">Build options</a>
 ### Environment variables
 
 Two paths are set at build time:
@@ -172,6 +194,22 @@ $ cargo-deb --no-build -p usbsas-usbsas
 What each package installs is described in the [kiosk
 documentation](./kiosk.md#packages).
 
+## <a name="packages-alpine">Alpine packages</a>
+> [!WARNING]
+> This package is only meant to be used as a quick and easy way to setup a demo on a Raspberry Pi using the procedure described in [Raspberry Pi image](#raspiiso). The provided OpenRC services are **NOT** hardened!!
+
+Once a build environment is set up on your machine (see [this Alpine wiki page](https://wiki.alpinelinux.org/wiki/Abuild_and_Helpers#Setting_up_the_build_environment) for a guide), you may build the `usbsas` meta-package found in `alpine/apk` by going there and executing
+```shell
+$ abuild
+```
+
+The resulting packages will be present in `~/packages/alpine/$(uname -m)/` which is a [local repository](https://wiki.alpinelinux.org/wiki/Repositories#) in and of itself.
+
+As such you can install the resulting package with
+```shell
+$ apk add -X "~/packages/alpine/$(uname -m)/" usbsas
+```
+
 ## <a name="liveiso">Live ISO</a>
 
 The usbsas live ISO is a live Debian system with the usbsas packages
@@ -201,6 +239,44 @@ Since it runs from memory, a machine with at least 4 GB of RAM is recommended:
 half of it is used for `/tmp`, and each transfer needs about 3 times its size
 in `/tmp`.
 
+
+## <a name="raspiiso">Raspberry Pi Alpine image</a>
+> [!WARNING]
+> This image is only meant to be used as a quick and easy way to setup a demo on a Raspberry Pi. A production setup would need a properly setup and hardened Alpine image as well as properly hardened services.  
+> Also note that due to the hid drivers being built into the default `linux-rpi` kernel, you'd need to rebuild the kernel with these drivers as modules (or simply disabled) in order for usbsas-hid to be working properly.
+
+A [diskless mode](https://wiki.alpinelinux.org/wiki/Diskless_Mode) Raspberry Pi image based on Alpine can be built using the compose file found in `alpine/compose.yaml`.
+
+One can build the images with the following commands after having installed `qemu-user-static` and setup `qemu-user-static-binfmt` in the case of an aarch64 Raspberry Pi (3 to 5) and a x86\_64 host.  
+The target cpu architecture can be set in the `alpine/compose.yaml` file for both images.
+```shell
+# with podman (using the podman-compose plugin)
+$ podman compose build apk_build_base img_build_base
+# with docker
+$ sudo -g docker docker compose build apk_build_base img_build_base
+```
+This provides you with a base to build the usbsas alpine package for the right architecture as well as default scripts for building a Raspberry Pi image with the usbsas packages generated using the previous image.  
+By default, it will use the `rpiimg_usbsas` profile, generating a `.img.gz` file that can be directly unzipped and flashed to an sd card. [Should you want to partition the SD card yourself](https://wiki.alpinelinux.org/wiki/Raspberry_Pi#Manual_method), you can also override the default `command` of the `img_build_base` image in `alpine/compose.yaml` to use the `rpi_usbsas` profile which instead generates a `.tar.gz`, the contents of which you can copy in the created partition.
+
+You can build the package and image with defaults in one go simply with:
+```shell
+# with podman (using the podman-compose plugin)
+$ podman compose up
+# with docker
+$ sudo -g docker docker compose up
+```
+
+You can of course provide another entrypoint, should you wish to tweak some settings before building the apk or [building the image with mkimage.sh](https://wiki.alpinelinux.org/wiki/How_to_make_a_custom_ISO_image_with_mkimage#Create_the_ISO) using the commented-out lines in `alpine/compose.yaml`.
+
+Also note that you can run both images separately using
+```shell
+# with podman (using the podman-compose plugin)
+$ podman compose up apk_build_base
+$ podman compose up --no-deps img_build_base
+# with docker
+$ sudo -g docker docker compose up apk_build_base
+$ sudo -g docker docker compose up --no-deps img_build_base
+```
 
 ## <a name="tests">Tests</a>
 
