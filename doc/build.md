@@ -2,10 +2,13 @@
 
 * [Requirements](#requirements)
 * [Building on Debian](#debian)
+* [Building on Alpine](#alpine)
 * [Build options](#options)
 * [Building with Docker](#docker)
 * [Debian packages](#packages)
+* [Alpine packages](#packages-alpine)
 * [Live ISO](#liveiso)
+* [Raspberry Pi image](#raspiiso)
 * [Tests](#tests)
 
 ## <a name="requirements">Requirements</a>
@@ -77,8 +80,32 @@ $ cargo build --release -p usbsas-hid
 To try usbsas from the build directory, see [Running from the build
 directory](./configuration.md#devrun) in the configuration documentation.
 
-## <a name="options">Build options</a>
+## <a name="alpine">Building on Alpine</a>
+This was tested on an Alpine 3.24 container but may very well work on older and/or newer versions.
 
+First, switch to the `raspi-demo` branch:
+```shell
+$ git switch raspi-demo
+```
+
+Install the following build dependencies:
+```shell
+$ doas apk add alpine-sdk cargo clang-static eudev-dev gcc libgcc-static libusb-dev libseccomp-static libxml2-static linux-headers llvm-static llvm-dev musl-dev ncurses-static pkgconf protoc zlib-static zstd-static
+```
+as well as the runtime dependencies:
+```shell
+$ doas apk add eudev eudev-openrc protoc libusb libseccomp cage wayland-libs-egl font-noto-emoji clamav-daemon freshclam fuse3
+```
+
+Then build with the following commands:
+```shell
+$ cargo build --release --no-default-features -F bindgen-static -p usbsas-scsi2files -p usbsas-files2fs && \
+cargo build --release --no-default-features -p usbsas-net && \
+cargo build --release --workspace --exclude usbsas-scsi2files --exclude usbsas-files2fs --exclude usbsas-net --exclude usbsas-mock --exclude usbsas-fsrw
+```
+
+## <a name="options">Build options</a>
+podman run -it --arch aarch64 --network host -v ./image_out:/out:U usbsas_build_base:3.24
 ### Environment variables
 
 Two paths are set at build time:
@@ -172,6 +199,19 @@ $ cargo-deb --no-build -p usbsas-usbsas
 What each package installs is described in the [kiosk
 documentation](./kiosk.md#packages).
 
+## <a name="packages-alpine">Alpine packages</a>
+Once a build environment is set up on your machine (see [this Alpine wiki page](https://wiki.alpinelinux.org/wiki/Abuild_and_Helpers#Setting_up_the_build_environment) for a guide), you may build the `usbsas` meta-package found in `alpine/apk` by going there and executing
+```shell
+$ abuild
+```
+
+The resulting packages will be present in `~/packages/alpine/$(uname -m)/` which is a [local repository](https://wiki.alpinelinux.org/wiki/Repositories#) in and of itself.
+
+As such you can install the resulting package with
+```shell
+$ apk add -X "~/packages/alpine/$(uname -m)/" usbsas
+```
+
 ## <a name="liveiso">Live ISO</a>
 
 The usbsas live ISO is a live Debian system with the usbsas packages
@@ -200,6 +240,35 @@ CD-ROM, then boot from it.
 Since it runs from memory, a machine with at least 4 GB of RAM is recommended:
 half of it is used for `/tmp`, and each transfer needs about 3 times its size
 in `/tmp`.
+
+
+## <a name="raspiiso">Raspberry Pi image</a>
+Though not completely hardened and using the default usbsas config, a bootable raspberry pi image based on Alpine can be built using the Containerfile found in `alpine/Containerfile.build_base`
+
+One can build the image with the following command after having installed `qemu-user-static` and setup `qemu-user-static-binfmt` in the case of an aarch64 Raspberry Pi (3 to 5)
+```shell
+# with podman
+$ podman build --network host --arch aarch64 -f Containerfile.build_base -t usbsas_build_base:3.24 ..
+# with docker
+$ docker build --arch aarch64 -f Containerfile.build_base -t usbsas_build_base:3.24 ..
+```
+This provides you with a base containing the usbsas alpine package built for the right architecture as well as default scripts for building a Raspberry Pi image with the usbsas packages embedded.
+
+You can build the aforementioned default image by simply running the container:
+```shell
+# with podman
+$ podman run -it --arch aarch64 --network host -v ./image-out:/out:U usbsas_build_base:3.24
+# with docker
+$ docker run -it --arch aarch64 -v ./image-out:/out usbsas_build_base:3.24
+```
+
+Or you can provide another entrypoint if you wish to tweak some settings before [building the image with mkimage.sh](https://wiki.alpinelinux.org/wiki/How_to_make_a_custom_ISO_image_with_mkimage#Create_the_ISO)
+```shell
+# with podman
+$ podman run -it --arch aarch64 --network host -v ./image-out:/out:U --entrypoint /bin/ash usbsas_build_base:3.24
+# with docker
+$ docker run -it --arch aarch64 -v ./image-out:/out --entrypoint /bin/ash usbsas_build_base:3.24
+```
 
 
 ## <a name="tests">Tests</a>
