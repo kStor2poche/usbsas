@@ -33,3 +33,10 @@ proto3_pb2.py
 *.toc
 *.vrb
 *.xdv
+
+### alpine builds
+alpine/apk/*
+!alpine/apk/APKBUILD
+!alpine/apk/usbsas-*
+!alpine/apk/hid-dealer
+alpine/image-out
